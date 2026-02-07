@@ -11,8 +11,12 @@ router.get("/", async (req, res) => {
   try {
     //inputs passed in query params, 1 is default page and 10 is default limit
     const { search, squadron, page = 1, limit = 10 } = req.query;
-    const currentPage = Math.max(1, +page);
-    const limitPerPage = Math.max(1, +limit);
+    //validate and sanitize page and limit inputs
+    const currentPage = Math.max(1, parseInt(String(page), 10) || 1);
+    const limitPerPage = Math.min(
+      Math.max(1, parseInt(String(limit), 10) || 10),
+      100,
+    );
     //calculate offset for pagination
     const offset = (currentPage - 1) * limitPerPage;
     const filterConditions = [];
@@ -25,7 +29,9 @@ router.get("/", async (req, res) => {
     }
 
     if (squadron) {
-      filterConditions.push(ilike(squadrons.name, `%${squadron}%`));
+      //escape % characters in squadron name to prevent SQL injection and ensure correct search results
+      const squadronPattern = `%${String(squadron).replace(/%/g, "\\$&")}%`;
+      filterConditions.push(ilike(squadrons.name, squadronPattern));
     }
 
     const whereClause =
