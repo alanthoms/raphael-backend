@@ -7,6 +7,7 @@ const port = 8000;
 
 if (!process.env.DATABASE_URL)
   throw new Error("DATABASE_URL is not defined in environment variables");
+
 app.use(
   cors({
     origin: process.env.FRONTEND_URL || "http://localhost:5173",
