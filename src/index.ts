@@ -1,8 +1,16 @@
 import express from "express";
 import acpsRouter from "./routes/acps";
+import cors from "cors";
 
 const app = express();
 const port = 8000;
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    methods: "GET,POST,PUT,DELETE",
+    credentials: true,
+  }),
+);
 
 app.use(express.json());
 
