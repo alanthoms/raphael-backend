@@ -8,6 +8,13 @@
       "when": 1770423489608,
       "tag": "0000_tense_roland_deschain",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1770593830345,
+      "tag": "0001_magical_supernaut",
+      "breakpoints": true
     }
   ]
 }
