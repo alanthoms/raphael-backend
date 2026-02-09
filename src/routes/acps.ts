@@ -24,7 +24,11 @@ router.get("/", async (req, res) => {
     if (search) {
       filterConditions.push(
         //ilike is used for case-insensitive search, % is used for wildcard search
-        or(ilike(acps.name, `%${search}%`), ilike(acps.code, `%${search}%`)),
+        or(
+          ilike(acps.name, `%${search}%`),
+          ilike(acps.serialNumber, `%${search}%`),
+          ilike(acps.type, `%${search}%`),
+        ),
       );
     }
 
