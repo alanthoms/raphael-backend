@@ -27,7 +27,6 @@ router.get("/", async (req, res) => {
         or(
           ilike(acps.name, `%${search}%`),
           ilike(acps.serialNumber, `%${search}%`),
-          ilike(acps.type, `%${search}%`),
         ),
       );
     }

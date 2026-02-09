@@ -16,17 +16,17 @@ const securityMiddleware = async (
     let message: string;
     switch (role) {
       case "admin":
-        limit = 20; // Very high limit for admins
-        message = "Admin rate limit exceeded. 20 per minute";
+        limit = 50; // Very high limit for admins
+        message = "Admin rate limit exceeded. 50 per minute";
         break;
       case "commander":
       case "operator":
-        limit = 10; // Moderate limit for commanders and operators
-        message = "Commander rate limit exceeded. 10 per minute";
+        limit = 35; // Moderate limit for commanders and operators
+        message = "Commander rate limit exceeded. 35 per minute";
         break;
       default:
-        limit = 5; // Strict limit for guests
-        message = "Guest rate limit exceeded. 5 per minute";
+        limit = 25; // Strict limit for guests
+        message = "Guest rate limit exceeded. 25 per minute";
         break;
     }
 

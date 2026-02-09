@@ -4,6 +4,9 @@ import cors from "cors";
 import securityMiddleware from "./middleware/security";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./lib/auth";
+import usersRouter from "./routes/users";
+import missionsRouter from "./routes/missions";
+
 const app = express();
 const port = 8000;
 
@@ -25,6 +28,8 @@ app.use(express.json());
 app.use(securityMiddleware); // Apply security middleware globally
 
 app.use("/api/acps", acpsRouter);
+app.use("/api/users", usersRouter);
+app.use("/api/missions", missionsRouter);
 
 app.get("/", (req, res) => {
   res.send("Hello, World!");
