@@ -29,7 +29,7 @@ router.post("/", async (req, res) => {
 router.get("/", async (req, res) => {
   try {
     //inputs passed in query params, 1 is default page and 10 is default limit
-    const { search, page = 1, limit = 10 } = req.query;
+    const { search, commander, page = 1, limit = 10 } = req.query;
     //validate and sanitize page and limit inputs
     const currentPage = Math.max(1, parseInt(String(page), 10) || 1);
     const limitPerPage = Math.min(
@@ -45,17 +45,15 @@ router.get("/", async (req, res) => {
     if (search) {
       filterConditions.push(
         //ilike is used for case-insensitive search, % is used for wildcard search
-        or(ilike(missions.name, `%${search}%`)),
+        ilike(missions.name, `%${search}%`),
       );
     }
 
-    /*
-    if (squadron) {
+    if (commander) {
       //escape % characters in squadron name to prevent SQL injection and ensure correct search results
-      const squadronPattern = `%${String(squadron).replace(/%/g, "\\$&")}%`;
-      filterConditions.push(ilike(squadrons.name, squadronPattern));
+      const squadronPattern = `%${String(commander).replace(/%/g, "\\$&")}%`;
+      filterConditions.push(ilike(user.name, squadronPattern));
     }
-      **/
 
     const whereClause =
       filterConditions.length > 0 ? and(...filterConditions) : undefined;
@@ -73,7 +71,11 @@ router.get("/", async (req, res) => {
         commander: { name: user.name },
       })
       .from(missions)
-      .leftJoin(user, eq(missions.commanderId, user.id));
+      .leftJoin(user, eq(missions.commanderId, user.id))
+      .where(whereClause)
+      .orderBy(desc(missions.createdAt))
+      .limit(limitPerPage)
+      .offset(offset);
 
     res.status(200).json({
       data: missionsList,
