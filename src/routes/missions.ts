@@ -7,7 +7,11 @@ router.post("/", async (req, res) => {
   try {
     const [createdMission] = await db
       .insert(missions)
-      .values({ ...req.body, schedules: [] })
+      .values({
+        ...req.body,
+        schedules: [],
+        authCode: `TAC-${Math.random().toString(36).substring(7).toUpperCase()}`,
+      })
       .returning({ id: missions.id });
 
     if (!createdMission) throw Error;
