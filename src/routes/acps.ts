@@ -74,4 +74,90 @@ router.get("/", async (req, res) => {
   }
 });
 
+router.post("/", async (req, res) => {
+  try {
+    const { name, type, serialNumber, squadronId, description } = req.body;
+
+    // Validation
+    if (!name || !type || !serialNumber || !squadronId) {
+      return res.status(400).json({
+        error: "Missing required fields: name, type, serialNumber, squadronId",
+      });
+    }
+
+    // Validate ACP type
+    const validTypes = ["viper", "ghost_eye", "sentinel", "electronic_warfare"];
+    if (!validTypes.includes(type)) {
+      return res.status(400).json({
+        error: `Invalid ACP type. Must be one of: ${validTypes.join(", ")}`,
+      });
+    }
+
+    // Validate serial number format (uppercase letters, numbers, hyphens only)
+    const serialNumberRegex = /^[A-Z0-9-]+$/;
+    if (!serialNumberRegex.test(serialNumber)) {
+      return res.status(400).json({
+        error:
+          "Serial number must contain only uppercase letters, numbers, and hyphens",
+      });
+    }
+
+    // Check if serial number already exists
+    const existingAcp = await db
+      .select()
+      .from(acps)
+      .where(eq(acps.serialNumber, serialNumber))
+      .limit(1);
+
+    if (existingAcp.length > 0) {
+      return res.status(409).json({
+        error: "Serial number already exists",
+      });
+    }
+
+    // Verify squadron exists
+    const squadron = await db
+      .select()
+      .from(squadrons)
+      .where(eq(squadrons.id, Number(squadronId)))
+      .limit(1);
+
+    if (squadron.length === 0) {
+      return res.status(404).json({
+        error: "Squadron not found",
+      });
+    }
+
+    // Create the ACP
+    const newAcp = await db
+      .insert(acps)
+      .values({
+        name,
+        type,
+        serialNumber,
+        squadronId: Number(squadronId),
+        description: description || null,
+      })
+      .returning();
+
+    // Fetch the complete ACP with squadron details
+    const createdAcp = await db
+      .select({
+        ...getTableColumns(acps),
+        squadron: { ...getTableColumns(squadrons) },
+      })
+      .from(acps)
+      .leftJoin(squadrons, eq(acps.squadronId, squadrons.id))
+      .where(eq(acps.id, newAcp[0].id))
+      .limit(1);
+
+    res.status(201).json({
+      data: createdAcp[0],
+    });
+  } catch (err) {
+    console.error("Error creating ACP:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 export default router;
