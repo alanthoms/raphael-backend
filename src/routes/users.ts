@@ -69,4 +69,21 @@ router.get("/", async (req, res) => {
   }
 });
 
+router.get("/commanders", async (req, res) => {
+  try {
+    const commandersList = await db
+      .select({
+        id: user.id,
+        name: user.name,
+      })
+      .from(user)
+      .where(eq(user.role, "commander"));
+
+    res.status(200).json({ data: commandersList });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 export default router;

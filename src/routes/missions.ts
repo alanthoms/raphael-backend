@@ -102,10 +102,10 @@ router.get("/", async (req, res) => {
         eq(missionAssignments.operatorId, String(finalOperatorId)),
       );
     }
-    if (commander) {
-      //escape % characters in squadron name to prevent SQL injection and ensure correct search results
-      const squadronPattern = `%${String(commander).replace(/%/g, "\\$&")}%`;
-      filterConditions.push(ilike(user.name, squadronPattern));
+    if (commander && commander !== "all") {
+      // Use 'eq' (equals) because 'commander' is the UUID string from your frontend
+      // Use missions.commanderId because that is what your Zod schema and Drizzle mapping use
+      filterConditions.push(eq(missions.commanderId, String(commander)));
     }
 
     const whereClause =
