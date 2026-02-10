@@ -1,8 +1,9 @@
 import express from "express";
 import { db } from "../db/db";
-import { missions, user } from "../db/schema/index.js";
+import { acps, missions, squadrons, user } from "../db/schema/index.js";
 
 import { and, desc, eq, getTableColumns, ilike, or, sql } from "drizzle-orm";
+import { get } from "node:http";
 const router = express.Router();
 
 router.post("/", async (req, res) => {
@@ -90,6 +91,39 @@ router.get("/", async (req, res) => {
     console.error(err);
     res.status(500).json({ error: "Internal server error" });
   }
+});
+
+//gets mission details
+router.get("/:id", async (req, res) => {
+  //has to turn into number as req params is string from the url
+  const missionId = Number(req.params.id);
+
+  if (!Number.isFinite(missionId))
+    return res.status(400).json({ error: "no class found." });
+
+  const [missionDetails] = await db
+    .select({
+      ...getTableColumns(missions),
+      acp: {
+        ...getTableColumns(acps),
+      },
+      squadron: {
+        ...getTableColumns(squadrons),
+      },
+      commander: {
+        ...getTableColumns(user),
+      },
+    })
+    .from(missions)
+    .leftJoin(acps, eq(missions.acpId, acps.id))
+    .leftJoin(user, eq(missions.commanderId, user.id))
+    .leftJoin(squadrons, eq(acps.squadronId, squadrons.id))
+    .where(eq(missions.id, missionId));
+
+  if (!missionDetails)
+    return res.status(404).json({ error: "No mission found" });
+
+  res.status(200).json({ data: missionDetails });
 });
 
 export default router;
