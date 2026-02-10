@@ -1,28 +1,58 @@
 import express from "express";
 import { db } from "../db/db";
-import { acps, missions, squadrons, user } from "../db/schema/index.js";
+import {
+  acps,
+  missions,
+  squadrons,
+  user,
+  missionAssignments,
+} from "../db/schema/index.js";
 
-import { and, desc, eq, getTableColumns, ilike, or, sql } from "drizzle-orm";
+import {
+  aliasedTable,
+  and,
+  desc,
+  eq,
+  getTableColumns,
+  ilike,
+  or,
+  sql,
+} from "drizzle-orm";
 import { get } from "node:http";
-const router = express.Router();
 
+const router = express.Router();
+const operators = aliasedTable(user, "operators");
 router.post("/", async (req, res) => {
+  const { operatorId, ...missionData } = req.body;
+
   try {
+    // 1. Insert the mission first
     const [createdMission] = await db
       .insert(missions)
       .values({
-        ...req.body,
-        schedules: [],
+        ...missionData,
         authCode: `TAC-${Math.random().toString(36).substring(7).toUpperCase()}`,
       })
       .returning({ id: missions.id });
 
-    if (!createdMission) throw Error;
+    if (!createdMission) {
+      return res
+        .status(500)
+        .json({ error: "Failed to create mission record." });
+    }
+
+    // 2. Insert the assignment if an operator was picked
+    if (operatorId) {
+      await db.insert(missionAssignments).values({
+        missionId: createdMission.id,
+        operatorId: operatorId,
+      });
+    }
 
     res.status(201).json({ data: createdMission });
   } catch (e) {
-    console.error(`POST /missions error ${e}`);
-    res.status(500).json({ error: e });
+    console.error(`POST /missions error: ${e}`);
+    res.status(500).json({ error: "Internal server error during creation." });
   }
 });
 
@@ -30,14 +60,20 @@ router.post("/", async (req, res) => {
 router.get("/", async (req, res) => {
   try {
     //inputs passed in query params, 1 is default page and 10 is default limit
-    const { search, commander, page = 1, limit = 10 } = req.query;
+    const {
+      search,
+      commander,
+      operatorId,
+      page = 1,
+      limit = 10,
+      filters,
+    } = req.query;
     //validate and sanitize page and limit inputs
     const currentPage = Math.max(1, parseInt(String(page), 10) || 1);
     const limitPerPage = Math.min(
       Math.max(1, parseInt(String(limit), 10) || 10),
       100,
     );
-
     //calculate offset for pagination
     const offset = (currentPage - 1) * limitPerPage;
     const filterConditions = [];
@@ -50,6 +86,22 @@ router.get("/", async (req, res) => {
       );
     }
 
+    const parsedFilters =
+      typeof filters === "string" ? JSON.parse(filters) : filters;
+
+    // Extract operatorId from Refine's filter format
+    const operatorIdFromRefine = Array.isArray(parsedFilters)
+      ? parsedFilters.find((f) => f.field === "operatorId")?.value
+      : null;
+
+    // Use either direct query param OR the one from filters
+    const finalOperatorId = operatorId || operatorIdFromRefine;
+
+    if (finalOperatorId) {
+      filterConditions.push(
+        eq(missionAssignments.operatorId, String(finalOperatorId)),
+      );
+    }
     if (commander) {
       //escape % characters in squadron name to prevent SQL injection and ensure correct search results
       const squadronPattern = `%${String(commander).replace(/%/g, "\\$&")}%`;
@@ -58,10 +110,14 @@ router.get("/", async (req, res) => {
 
     const whereClause =
       filterConditions.length > 0 ? and(...filterConditions) : undefined;
+
     const countResult = await db
       .select({ count: sql<number>`count(*)` })
       .from(missions)
-      .leftJoin(user, eq(missions.commanderId, user.id))
+      .leftJoin(
+        missionAssignments,
+        eq(missions.id, missionAssignments.missionId),
+      )
       .where(whereClause);
 
     const totalCount = countResult[0]?.count || 0;
@@ -70,9 +126,15 @@ router.get("/", async (req, res) => {
       .select({
         ...getTableColumns(missions),
         commander: { name: user.name },
+        operator: { name: operators.name, id: operators.id },
       })
       .from(missions)
       .leftJoin(user, eq(missions.commanderId, user.id))
+      .leftJoin(
+        missionAssignments,
+        eq(missions.id, missionAssignments.missionId),
+      )
+      .leftJoin(operators, eq(missionAssignments.operatorId, operators.id))
       .where(whereClause)
       .orderBy(desc(missions.createdAt))
       .limit(limitPerPage)
@@ -113,11 +175,14 @@ router.get("/:id", async (req, res) => {
       commander: {
         ...getTableColumns(user),
       },
+      operator: { name: operators.name },
     })
     .from(missions)
     .leftJoin(acps, eq(missions.acpId, acps.id))
     .leftJoin(user, eq(missions.commanderId, user.id))
     .leftJoin(squadrons, eq(acps.squadronId, squadrons.id))
+    .leftJoin(missionAssignments, eq(missions.id, missionAssignments.missionId))
+    .leftJoin(operators, eq(missionAssignments.operatorId, operators.id))
     .where(eq(missions.id, missionId));
 
   if (!missionDetails)
