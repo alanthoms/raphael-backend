@@ -1,21 +1,18 @@
-Neon Serverless + Drizzle setup
 
-Quickstart
+Leonardo Ops Dashboard (Backend API)
+A REST API for ACP and mission management with authentication, server-side filtering, and pagination.
 
-- Copy `.env.example` to `.env` and set `DATABASE_URL` to your Neon connection string.
-- Install dependencies:
+Frontend Repo: https://github.com/alanthoms/raphael-frontend
 
-```bash
-npm install
-```
+Auth + sessions (and role-based authorization)
+CRUD endpoints for ACPs / missions (whatever you support)
+Search + filters (e.g., name/code/squadron)
+Pagination + limit caps (e.g., max 100)
+Input validation + sanitisation of query params
+Consistent response shape ({ data, meta } style)
 
-- Run in dev mode:
 
-```bash
-npm run dev
-```
-
-Notes
-
-- The Drizzle client is initialized in `src/db.ts` and expects `DATABASE_URL`.
-- Get the Neon connection string from the Neon Console for project `autumn-cell-99874976` (org `org-young-block-72342367`).
+Node.js + Express
+PostgreSQL
+Drizzle ORM (type-safe SQL)
+Auth (Better Auth or your solution)
