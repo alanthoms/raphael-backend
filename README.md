@@ -15,4 +15,4 @@ Consistent response shape ({ data, meta } style)
 Node.js + Express
 PostgreSQL
 Drizzle ORM (type-safe SQL)
-Auth (Better Auth or your solution)
+Auth (Better Auth)
